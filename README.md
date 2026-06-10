@@ -56,3 +56,23 @@ serial=PFT-000427 result=PASS reason="accepted"
 ## Remote
 
 Intended public repository: https://github.com/rheslar1/production-flash-test-rig
+
+<!-- cpp17-solid-implementation:start -->
+## C++17, Design Patterns, and SOLID Implementation
+
+This repository includes a host-buildable C++17 implementation, not only documentation. The implementation applies:
+
+- Strategy pattern for validation rules.
+- Adapter interfaces for input samples and telemetry/reporting.
+- Composite validation for combining safety and readiness checks.
+- Facade orchestration through the project runtime class.
+- SOLID boundaries between profile data, input acquisition, validation, telemetry encoding, and tests.
+<!-- cpp17-solid-implementation:end -->
+
+<!-- deep-architecture-links:start -->
+## Deep Architecture and UML
+
+- [Deep architecture](docs/deep-architecture.md)
+- [Full UML Draw.io source](docs/diagrams/full-system-uml.drawio)
+- [Full UML PNG export](docs/diagrams/full-system-uml.png)
+<!-- deep-architecture-links:end -->
