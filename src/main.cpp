@@ -1,62 +1,58 @@
-#include <array>
+#include "flash_rig/FlashRig.hpp"
+
 #include <iostream>
-#include <string_view>
 
-class IReadinessRule {
- public:
-  virtual ~IReadinessRule() = default;
-  virtual bool passes(std::string_view evidenceTarget) const = 0;
-  virtual std::string_view name() const = 0;
-};
+namespace {
 
-class RequiredEvidenceRule final : public IReadinessRule {
- public:
-  bool passes(std::string_view evidenceTarget) const override {
-    return !evidenceTarget.empty();
-  }
+flash_rig::FirmwareImage releaseImage() {
+  return flash_rig::FirmwareImage{
+      "2026.06.10-production",
+      "REV-C",
+      "3b7e1f0c9d4a5b682817263544e5f60718c9aabbccddeeff0011223344556677",
+      4U * 1024U * 1024U};
+}
 
-  std::string_view name() const override {
-    return "RequiredEvidenceRule";
-  }
-};
+flash_rig::BoardSlot passingBoard() {
+  return flash_rig::BoardSlot{
+      "FIXTURE-A",
+      "SLOT-01",
+      "PFT-000427",
+      "REV-C",
+      5.03,
+      38.5,
+      "AM3358-2BGA"};
+}
 
-struct ProjectProfile {
-  std::string_view title;
-  std::string_view summary;
-  std::string_view evidenceTarget;
-  std::array<std::string_view, 8> tags;
-};
+flash_rig::BoardSlot quarantineBoard() {
+  return flash_rig::BoardSlot{
+      "FIXTURE-A",
+      "SLOT-02",
+      "PFT-000428",
+      "REV-B",
+      5.01,
+      41.0,
+      "AM3358-2BGA"};
+}
 
-constexpr ProjectProfile profile{
-  "Production Flash and Test Rig",
-  "Repeatable board flashing, update-cycle validation, and long-run soak checks for deployment confidence.",
-  "Clear pass/fail evidence for firmware updates, board bring-up, and field acceptance.",
-  {
-    "C++17",
-    "C++ Design Patterns",
-    "SOLID",
-    "SWUpdate",
-    "Yocto",
-    "Shell",
-    "QA logs",
-    "Hardware lab"
-  }
-};
+}  // namespace
 
 int main() {
-  const RequiredEvidenceRule readinessRule;
+  flash_rig::SimulatedProgrammer programmer;
+  flash_rig::SimulatedBootProbe bootProbe;
+  flash_rig::SimulatedSoakRunner soakRunner;
+  flash_rig::TextReportSink reportSink(std::cout);
+  flash_rig::ProductionTestRig rig(
+      programmer, bootProbe, soakRunner, reportSink);
 
-  std::cout << profile.title << '\n';
-  std::cout << "Summary: " << profile.summary << '\n';
-  std::cout << "Evidence target: " << profile.evidenceTarget << '\n';
-  std::cout << "Readiness rule: " << readinessRule.name() << '\n';
-  std::cout << "SOLID marker: C++17 strategy interface with replaceable readiness rule" << '\n';
-  std::cout << "Stack:";
+  std::cout << "Production Flash and Test Rig\n";
+  std::cout << "Release image: " << releaseImage().version << "\n\n";
 
-  for (std::size_t index = 0; index < profile.tags.size(); ++index) {
-    std::cout << ' ' << profile.tags[index] << (index + 1U == profile.tags.size() ? "" : ",");
-  }
-
+  const auto accepted = rig.runBoard(passingBoard(), releaseImage());
   std::cout << '\n';
-  return readinessRule.passes(profile.evidenceTarget) ? 0 : 1;
+  const auto rejected = rig.runBoard(quarantineBoard(), releaseImage());
+
+  std::cout << "\nstation_summary accepted=" << (accepted.accepted ? 1 : 0)
+            << " quarantined=" << (!rejected.accepted ? 1 : 0) << '\n';
+
+  return accepted.accepted && !rejected.accepted ? 0 : 1;
 }

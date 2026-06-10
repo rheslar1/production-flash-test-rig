@@ -4,15 +4,14 @@ Repeatable board flashing, update-cycle validation, and long-run soak checks for
 
 ## Portfolio Purpose
 
-This repository is an Embedded Systems project scaffold for the Rheslar portfolio. It is designed to become a hardware-backed project with build output, validation logs, and reviewable implementation evidence.
-
-All generated Embedded Systems repos are C++17-first and are framed around C++ design patterns and SOLID design principles.
+This repository models a production fixture that accepts a firmware release image and a board slot, then emits pass/fail evidence for manufacturing release. The current implementation is host-runnable C++17 with simulated adapters so CI can verify the production workflow before real programmers, serial probes, and power instruments are wired in.
 
 ## Stack
 
 - C++17
 - C++ Design Patterns
 - SOLID
+- CMake / CTest
 - SWUpdate
 - Yocto
 - Shell
@@ -30,15 +29,29 @@ ctest --test-dir build --output-on-failure
 
 ## Implementation Slices
 
-- C++17 starter executable that exposes the project identity, stack, and validation target.
-- Small strategy-style readiness check that keeps the scaffold aligned with C++ design patterns.
-- Architecture document with control boundaries, data flow, safety assumptions, and evidence plan.
-- CTest smoke test that keeps source, docs, and CI files present as the repo grows.
-- GitHub Actions workflow for configure, build, executable smoke run, and repository validation.
+- Firmware manifest validation for version, target hardware revision, digest, and image size.
+- Board fixture preflight checks for serial, slot identity, voltage, and idle current.
+- Interface boundaries for programmer, boot probe, soak runner, and report sink adapters.
+- Simulated production station adapters for deterministic CI and local validation.
+- Orchestrated erase, program, verify, boot-health, power/thermal soak, and release decision steps.
+- Text evidence reports that can be archived with production records or CI logs.
+- CTest coverage for accepted boards, wrong hardware revision, invalid images, boot mismatch, and soak failures.
 
 ## Evidence Target
 
 Clear pass/fail evidence for firmware updates, board bring-up, and field acceptance.
+
+Example station output:
+
+```text
+serial=PFT-000427 result=PASS reason="accepted"
+  [PASS] fixture-preflight: FIXTURE-A/SLOT-01 stable at 5.03 V and 38.5 mA idle
+  [PASS] firmware-manifest: version 2026.06.10-production for hardware REV-C digest 3b7e1f0c9d4a
+  [PASS] erase-program-verify: erased, programmed 4194304 bytes, verified 3b7e1f0c9d4a
+  [PASS] boot-health: firmware 2026.06.10-production responded in 1180 ms
+  [PASS] power-thermal-soak: 12 cycles, max 48.5 C, 181.0 mA
+  [PASS] release-decision: board released for packaging with complete evidence
+```
 
 ## Remote
 

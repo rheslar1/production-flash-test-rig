@@ -6,41 +6,47 @@ Clear pass/fail evidence for firmware updates, board bring-up, and field accepta
 
 ## Runtime Shape
 
-1. Hardware or simulator input is sampled through a narrow driver boundary.
-2. A control profile normalizes state into a deterministic decision surface.
-3. Safety checks reject unsafe commands before they reach the actuator, transport, or update path.
-4. Telemetry and validation logs are emitted for repeatable review.
+1. A release operator provides a firmware manifest and a populated fixture slot.
+2. The rig preflights fixture identity, supply voltage, idle current, and manifest compatibility.
+3. A programmer adapter erases, writes, and verifies the target board.
+4. A boot probe validates firmware version, SoC identity, and boot timing.
+5. A soak runner performs update/reboot cycles while tracking failures, board temperature, and run current.
+6. A report sink emits release or quarantine evidence for the board record.
 
 ## C++17 Design Shape
 
-- `ProjectProfile` owns project identity and evidence text.
-- `IReadinessRule` defines a narrow strategy interface for scaffold readiness checks.
-- `RequiredEvidenceRule` is a concrete strategy used by the starter executable and tests.
-- The scaffold keeps documentation, executable behavior, and validation concerns separated.
+- `ProductionTestRig` owns orchestration and release/quarantine decisions.
+- `IProgrammer`, `IBootProbe`, `ISoakRunner`, and `IReportSink` isolate hardware-specific dependencies.
+- `FirmwareImage`, `BoardSlot`, `AcceptanceLimits`, and result structures keep the decision surface explicit.
+- `SimulatedProgrammer`, `SimulatedBootProbe`, and `SimulatedSoakRunner` provide deterministic CI behavior.
+- `TextReportSink` serializes evidence in a compact format suitable for CI logs and station archives.
 
 ## SOLID Notes
 
-- Single Responsibility: profile data and readiness rules are separate.
-- Open/Closed: new readiness rules can be added without changing the profile object.
-- Liskov Substitution: any `IReadinessRule` can replace the default rule.
-- Interface Segregation: the readiness interface exposes only one focused operation.
-- Dependency Inversion: the executable consumes the readiness rule abstraction.
+- Single Responsibility: orchestration, programming, boot probing, soak execution, and reporting are separated.
+- Open/Closed: hardware adapters can be replaced without changing the release decision flow.
+- Liskov Substitution: simulators and real station drivers share the same focused interfaces.
+- Interface Segregation: each station capability has a small role-specific abstraction.
+- Dependency Inversion: the rig depends on interfaces instead of concrete hardware transports.
 
 ## Boundaries
 
-- `src/`: native starter implementation and future device-specific drivers.
+- `include/flash_rig/`: public C++ domain types and adapter interfaces.
+- `src/`: production rig orchestration, simulator adapters, and CLI demo.
 - `docs/`: validation plans, timing notes, hardware captures, and acceptance evidence.
-- `tests/`: repo-level smoke tests and future simulator or host-side unit tests.
+- `tests/`: host-side unit tests for release and quarantine decisions.
 - `.github/workflows/`: CI entry point for build and validation evidence.
 
 ## Validation Plan
 
-- Build the host starter with CMake.
-- Run the executable and confirm the reported profile matches this repository.
-- Run CTest to validate the C++17 readiness scaffold.
-- Add hardware-specific logs after the first board, simulator, or bus test.
+- Build the host station model with CMake.
+- Run the executable and confirm one simulated board is released and one incompatible board is quarantined.
+- Run CTest to validate pass, preflight, manifest, boot, and soak decisions.
+- Add hardware-specific logs after the first real programmer, serial, and power-instrument integration.
 - Capture CI, terminal, and hardware evidence for the portfolio detail page.
 
 ## Expansion Notes
 
-Replace the starter profile with the project-specific implementation slice while preserving the same review boundaries: build, tests, architecture notes, validation logs, and screenshots.
+- Add concrete adapters for SWD/JTAG programmers, UART or USB boot probes, relay-controlled power cycles, and bench supply telemetry.
+- Persist report sink output to JSONL, CSV, or a manufacturing execution system endpoint.
+- Include signed SWUpdate or Yocto artifact metadata when release images are pulled from a build server.
